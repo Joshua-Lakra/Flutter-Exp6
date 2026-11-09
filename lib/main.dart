@@ -1,125 +1,182 @@
 
-import 'package:flutter/material.dart';
+  import 'dart:convert';
+  import 'package:flutter/material.dart';
+  import 'student.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: AnimationPage(),
-    );
+  void main() {
+    runApp(const MyApp());
   }
-}
 
-class AnimationPage extends StatefulWidget {
-  const AnimationPage({super.key});
+  class MyApp extends StatelessWidget {
+    const MyApp({super.key});
 
-  @override
-  State<AnimationPage> createState() => _AnimationPageState();
-}
+    @override
+    Widget build(BuildContext context) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: StudentPage(),
+      );
+    }
+  }
 
-class _AnimationPageState extends State<AnimationPage> {
-  bool isLarge = false;
+  class StudentPage extends StatefulWidget {
+    const StudentPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flutter Animations'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(seconds: 1),
-              curve: Curves.easeInOut,
-              width: isLarge ? 300 : 150,
-              height: isLarge ? 300 : 150,
-              decoration: BoxDecoration(
-                color: isLarge ? Colors.orange : Colors.blue,
-                borderRadius: BorderRadius.circular(
-                  isLarge ? 50 : 20,
+    @override
+    State<StudentPage> createState() => _StudentPageState();
+  }
+
+  class _StudentPageState extends State<StudentPage> {
+    final List<Student> students = [
+      Student(id: 1, name: 'Raj', course: 'CSE'),
+    ];
+
+    final TextEditingController nameController =
+        TextEditingController();
+
+    final TextEditingController courseController =
+        TextEditingController();
+
+    String jsonOutput = '';
+
+    void addStudent() {
+      if (nameController.text.isEmpty ||
+          courseController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Enter all student details'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        students.add(
+          Student(
+            id: students.length + 1,
+            name: nameController.text,
+            course: courseController.text,
+          ),
+        );
+
+        nameController.clear();
+        courseController.clear();
+      });
+    }
+
+    void convertToJson() {
+      List<Map<String, dynamic>> data =
+          students.map((student) => student.toJson()).toList();
+
+      String jsonString = jsonEncode(data);
+
+      List<dynamic> decodedData = jsonDecode(jsonString);
+
+      List<Student> newStudents = decodedData
+          .map((item) => Student.fromJson(item))
+          .toList();
+
+      setState(() {
+        jsonOutput = const JsonEncoder.withIndent('  ')
+            .convert(newStudents.map((s) => s.toJson()).toList());
+      });
+
+      print(jsonString);
+      print(newStudents.first.name);
+    }
+
+    @override
+    void dispose() {
+      nameController.dispose();
+      courseController.dispose();
+      super.dispose();
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Student Management'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Student Name',
+                  border: OutlineInputBorder(),
                 ),
               ),
-              child: const Center(
-                child: Text(
-                  'Flutter',
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: courseController,
+                decoration: const InputDecoration(
+                  labelText: 'Course',
+                  border: OutlineInputBorder(),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 10),
 
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  isLarge = !isLarge;
-                });
-              },
-              child: const Text('Animate'),
-            ),
+              ElevatedButton(
+                onPressed: addStudent,
+                child: const Text('Add Student'),
+              ),
 
-            const SizedBox(height: 15),
+              ElevatedButton(
+                onPressed: convertToJson,
+                child: const Text('Convert to JSON'),
+              ),
 
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation,
-                        secondaryAnimation) {
-                      return const SecondPage();
-                    },
-                    transitionsBuilder: (context, animation,
-                        secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      );
-                    },
+              const SizedBox(height: 10),
+
+              const Text(
+                'Student List',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              Expanded(
+                child: ListView.builder(
+                  itemCount: students.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.person),
+                        title: Text(students[index].name),
+                        subtitle: Text(students[index].course),
+                        trailing: Text(
+                          'ID: ${students[index].id}',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              if (jsonOutput.isNotEmpty)
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Card(
+                      color: Colors.blue.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: SelectableText(jsonOutput),
+                      ),
+                    ),
                   ),
-                );
-              },
-              child: const Text('Next Page'),
-            ),
-          ],
+                ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
-
-class SecondPage extends StatelessWidget {
-  const SecondPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Second Page'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Text(
-          'Page Transition Successful!',
-          style: TextStyle(fontSize: 22),
-        ),
-      ),
-    );
-  }
-}
